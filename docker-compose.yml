@@ -1,6 +1,10 @@
 services:
   webapp:
-    image: "asia.gcr.io/dakshay-goapptiv/my-app:latest" 
+    image: "asia.gcr.io/dakshay-goapptiv/my-app"
+    deploy:
+      update_config:
+        delay: 10s
+        order: start-first
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000"]
       interval: 10s

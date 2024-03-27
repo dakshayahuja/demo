@@ -34,48 +34,25 @@ pipeline {
         }
 
 
-        stage('Build Image') {
+        stage('Build and Push Image') {
             steps {
                 script {
-                    sh "docker build -t ${REGISTRY}/${IMAGE_NAME}:${NEW_TAG} -t ${REGISTRY}/${IMAGE_NAME}:latest ."
-                }
-            }
-        }
-        stage('Push Image') {
-            steps {
-                script {
+                    sh "docker build -t ${REGISTRY}/${IMAGE_NAME} ."
                     sh "docker push ${REGISTRY}/${IMAGE_NAME}"
                 }
             }
         }
-        stage('Deploy New Version') {
-            steps {
-                script {
-                    // Update docker-compose.yml with the new image tag
-                    sh "sed -i 's|image: ${REGISTRY}/${IMAGE_NAME}:.*|image: ${REGISTRY}/${IMAGE_NAME}:${NEW_TAG}|' docker-compose.yml"
 
-                    // Deploy the new version alongside the old one
-                    sh "docker compose build webapp"
-                    sh "docker compose up -d --scale webapp=2"
-
-                }
-            }
-        }
-        stage('Health Check and Switch Traffic') {
+        stage('Update Service') {
             steps {
                 script {
-                    sh "sleep 20"
-                }
-            }
-        }
-        stage('Scale Down Old Version') {
-            steps {
-                script {
-                    sh "docker compose up -d --scale webapp=1"
+                    sh "docker compose pull"
+                    sh "docker compose up -d"
                 }
             }
         }
     }
+
     post {
         always {
             echo 'Deployment process completed'
