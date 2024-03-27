@@ -2,8 +2,9 @@ pipeline {
     agent any
     environment {
         IMAGE_NAME = 'my-app'
-        NEW_TAG = "1.0.${BUILD_NUMBER}"
+        IMAGE_TAG = "1.0.${BUILD_NUMBER}"
         REGISTRY = 'asia.gcr.io/dakshay-goapptiv'
+        STACK_NAME = 'myappstack'
     }
     stages {
         stage('Checkout') {
@@ -12,50 +13,34 @@ pipeline {
             }
         }
 
-        stage('Global GCP Authentication') {
+        stage('Build Image') {
             steps {
                 script {
-                    withCredentials([file(credentialsId: 'gcp-sa-key', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
-                        sh 'gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS'
-                        sh 'gcloud auth configure-docker'
-                    }
-                }
-            }
-        }
-        
-        stage('Write .env File') {
-            steps {
-                script {
-                    withCredentials([file(credentialsId: 'env-file', variable: 'ENV_FILE')]) {
-                        writeFile file: '.env', text: readFile(ENV_FILE)
-                    }
+                    sh "docker build -t ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} ."
                 }
             }
         }
 
-
-        stage('Build and Push Image') {
+        stage('Push Image') {
             steps {
                 script {
-                    sh "docker build -t ${REGISTRY}/${IMAGE_NAME} ."
-                    sh "docker push ${REGISTRY}/${IMAGE_NAME}"
+                    sh "docker push ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
                 }
             }
         }
 
-        stage('Update Service') {
+        stage('Deploy to Docker Swarm') {
             steps {
                 script {
-                    sh "docker compose pull"
-                    sh "docker compose up -d"
+                    sh "docker pull ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
+                    sh "docker stack deploy -c docker-compose.yml ${STACK_NAME}"
                 }
             }
         }
     }
-
     post {
         always {
-            echo 'Deployment process completed'
+            echo 'Deployment process completed.'
         }
     }
 }
