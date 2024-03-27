@@ -22,18 +22,29 @@ pipeline {
                 }
             }
         }
+        
+        stage('Write .env File') {
+            steps {
+                script {
+                    withCredentials([file(credentialsId: 'env-file', variable: 'ENV_FILE')]) {
+                        writeFile file: '.env', text: readFile(ENV_FILE)
+                    }
+                }
+            }
+        }
+
 
         stage('Build Image') {
             steps {
                 script {
-                    sh "docker build -t ${REGISTRY}/${IMAGE_NAME}:${NEW_TAG} ."
+                    sh "docker build -t ${REGISTRY}/${IMAGE_NAME}:${NEW_TAG} -t ${REGISTRY}/${IMAGE_NAME}:latest ."
                 }
             }
         }
         stage('Push Image') {
             steps {
                 script {
-                    sh "docker push ${REGISTRY}/${IMAGE_NAME}:${NEW_TAG}"
+                    sh "docker push ${REGISTRY}/${IMAGE_NAME}"
                 }
             }
         }
@@ -44,8 +55,9 @@ pipeline {
                     sh "sed -i 's|image: ${REGISTRY}/${IMAGE_NAME}:.*|image: ${REGISTRY}/${IMAGE_NAME}:${NEW_TAG}|' docker-compose.yml"
 
                     // Deploy the new version alongside the old one
-                    sh "docker compose up -d --no-deps --build webapp"
-                    sh "docker compose scale webapp=2"
+                    sh "docker compose build webapp"
+                    sh "docker compose up -d --scale webapp=2"
+
                 }
             }
         }
@@ -59,7 +71,7 @@ pipeline {
         stage('Scale Down Old Version') {
             steps {
                 script {
-                    sh "docker compose scale webapp=1"
+                    sh "docker compose up -d --scale webapp=1"
                 }
             }
         }

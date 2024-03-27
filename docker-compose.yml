@@ -1,19 +1,15 @@
-version: '3'
 services:
   webapp:
-    image: "dakshayahuja/my-app:latest" 
-    build: .
+    image: "asia.gcr.io/dakshay-goapptiv/my-app:latest" 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000"]
       interval: 10s
       timeout: 5s
       retries: 3
-    volumes:
-      - ~/Desktop/.env:/usr/src/app/.env
   nginx:
     image: nginx:latest
     ports:
-      - "80:80"
+      - "8081:80"
     depends_on:
       - webapp
     volumes:
